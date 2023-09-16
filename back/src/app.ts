@@ -3,7 +3,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 import express, { Application } from "express";
 import morgan from "morgan";
 import cors from "cors";
-// import routing from "./routes";
+import routing from "./routes/parcels.routes";
 
 export const app: Application = express();
 
@@ -21,6 +21,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("tiny"));
 app.use(cors(corsOptions));
 
-// app.use(routing);
+app.use(routing);
 
 app.listen(3200);
