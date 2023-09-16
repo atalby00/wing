@@ -2,6 +2,24 @@ import { Item } from "../interfaces/item.interface";
 import { Order, OrderItem } from "../interfaces/order.interface";
 import { ParcelWithoutTrackingId } from "../interfaces/parcel.interface";
 
+const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
+  const parcelItemIds = parcelItems.map((parcelItem) => parcelItem.item_id);
+  const uniqueParcelItemIds = [...new Set(parcelItemIds)];
+
+  const uniqueParcelItems = uniqueParcelItemIds.map((uniqueParcelItemId) => {
+    const parcelItemsWithSameId = parcelItems.filter(
+      (parcelItem) => parcelItem.item_id === uniqueParcelItemId
+    );
+    const totalQuantity = parcelItemsWithSameId.reduce(
+      (acc, parcelItem) => acc + parcelItem.quantity,
+      0
+    );
+    return { item_id: uniqueParcelItemId, quantity: totalQuantity };
+  });
+
+  return uniqueParcelItems;
+};
+
 const getNbOfParcelsInPalette = (
   parcels: ParcelWithoutTrackingId[],
   paletteNumber: number
@@ -39,15 +57,28 @@ export const generateParcels = (
       const itemInfo = items.find((item) => item.id === orderItem.item_id);
       const orderItemWeight = parseFloat(itemInfo!.weight) * orderItem.quantity;
 
-      if (totalParcelWeight + orderItemWeight <= MAX_PARCEL_WEIGHT) {
-        totalParcelWeight = totalParcelWeight + orderItemWeight;
-        currentParcel = {
-          ...currentParcel,
-          weight: totalParcelWeight,
-          items: [...currentParcel.items, orderItem],
-        };
-      } else {
-        parcels = [...parcels, currentParcel];
+      if (orderItemWeight > MAX_PARCEL_WEIGHT) {
+        for (let i = 0; i < orderItem.quantity; i++) {
+          const nbOfParcelsInPalette = getNbOfParcelsInPalette(
+            parcels,
+            paletteNumber
+          );
+          if (nbOfParcelsInPalette === MAX_PARCELS_IN_PALETTE) {
+            paletteNumber++;
+          }
+
+          const newParcel = createNewParcel(order.id, paletteNumber);
+          newParcel.items.push(orderItem);
+          newParcel.weight = parseFloat(itemInfo!.weight);
+
+          parcels.push(newParcel);
+        }
+      } else if (orderItemWeight + totalParcelWeight > MAX_PARCEL_WEIGHT) {
+        const currentParcelItems = getUniqueParcelItems(currentParcel.items);
+        currentParcel.items = currentParcelItems;
+        parcels.push(currentParcel);
+
+        totalParcelWeight = 0;
 
         const nbOfParcelsInPalette = getNbOfParcelsInPalette(
           parcels,
@@ -56,8 +87,12 @@ export const generateParcels = (
         if (nbOfParcelsInPalette === MAX_PARCELS_IN_PALETTE) {
           paletteNumber++;
         }
-
         currentParcel = createNewParcel(order.id, paletteNumber);
+        currentParcel.items.push(orderItem);
+      } else {
+        totalParcelWeight = totalParcelWeight + orderItemWeight;
+        currentParcel.items.push(orderItem);
+        currentParcel.weight = totalParcelWeight;
       }
     });
   });
