@@ -1,7 +1,7 @@
 export interface Order {
   id: string;
   items: OrderItem[];
-  order_date: Date;
+  date: Date;
 }
 
 export interface OrderItem {

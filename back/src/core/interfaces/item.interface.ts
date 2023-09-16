@@ -1,5 +1,5 @@
 export interface Item {
   id: string;
-  weight: number;
+  weight: string;
   name: string;
 }

@@ -1,9 +1,12 @@
 import { OrderItem } from "./order.interface";
 
-export interface Parcel {
+export interface ParcelWithoutTrackingId {
   order_id: string;
   items: OrderItem[];
   weight: number;
-  tracking_id: number;
   palette_number: number;
+}
+
+export interface Parcel extends ParcelWithoutTrackingId {
+  tracking_id: number;
 }
