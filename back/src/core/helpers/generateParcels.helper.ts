@@ -1,3 +1,4 @@
+// const binPacker = require("bin-packer");
 import { Item } from "../interfaces/item.interface";
 import {
   Order,
@@ -5,7 +6,6 @@ import {
   OrderItemWithWeight,
 } from "../interfaces/order.interface";
 import { ParcelWithoutTrackingId } from "../interfaces/parcel.interface";
-const binPacker = require("bin-packer");
 
 const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
   const parcelItemIds = parcelItems.map((parcelItem) => parcelItem.item_id);
@@ -68,14 +68,46 @@ const packOrderItemsWithWeight = (
   orderItemsWithWeight: OrderItemWithWeight[],
   maxParcelWeight: number
 ) => {
-  const packItemsByProperty = (item: OrderItemWithWeight) => item.item_weight;
-  const packedItemsWithWeight = binPacker.nextFit(
-    orderItemsWithWeight,
-    packItemsByProperty,
-    maxParcelWeight
-  );
-  return packedItemsWithWeight.bins;
+  let parcels: OrderItemWithWeight[][] = [];
+  let parcel: OrderItemWithWeight[] = [];
+
+  orderItemsWithWeight.reduce((totalParcelWeight, orderItem, index) => {
+    const isLastItem = index === orderItemsWithWeight.length - 1;
+    const currentParcelWeight = totalParcelWeight + orderItem.item_weight;
+
+    if (currentParcelWeight > maxParcelWeight) {
+      parcels.push(parcel);
+      const newParcel = [orderItem];
+      if (isLastItem) {
+        parcels.push(newParcel);
+      } else {
+        parcel = newParcel;
+      }
+      return orderItem.item_weight;
+    }
+
+    parcel.push(orderItem);
+    if (isLastItem) {
+      parcels.push(parcel);
+    }
+    return currentParcelWeight;
+  }, 0);
+
+  return parcels;
 };
+
+// const packOrderItemsWithWeight = (
+//   orderItemsWithWeight: OrderItemWithWeight[],
+//   maxParcelWeight: number
+// ) => {
+//   const packItemsByProperty = (item: OrderItemWithWeight) => item.item_weight;
+//   const packedItemsWithWeight = binPacker.nextFit(
+//     orderItemsWithWeight,
+//     packItemsByProperty,
+//     maxParcelWeight
+//   );
+//   return packedItemsWithWeight.bins;
+// };
 
 const createParcel = (
   orderId: string,
