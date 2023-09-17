@@ -1,6 +1,7 @@
 import { Item } from "../interfaces/item.interface";
 import { Order, OrderItem } from "../interfaces/order.interface";
 import { ParcelWithoutTrackingId } from "../interfaces/parcel.interface";
+const binPacker = require("bin-packer");
 
 const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
   const parcelItemIds = parcelItems.map((parcelItem) => parcelItem.item_id);
@@ -20,82 +21,79 @@ const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
   return uniqueParcelItems;
 };
 
-const getNbOfParcelsInPalette = (
-  parcels: ParcelWithoutTrackingId[],
-  paletteNumber: number
-): number => {
-  const parcelsInPalette = parcels.filter(
-    (parcel) => parcel.palette_number === paletteNumber
-  );
-  return parcelsInPalette.length;
-};
+// const getNbOfParcelsInPalette = (
+//   parcels: ParcelWithoutTrackingId[],
+//   paletteNumber: number
+// ): number => {
+//   const parcelsInPalette = parcels.filter(
+//     (parcel) => parcel.palette_number === paletteNumber
+//   );
+//   return parcelsInPalette.length;
+// };
 
-const createNewParcel = (
-  orderId: string,
-  paletteNumber: number
-): ParcelWithoutTrackingId => ({
-  order_id: orderId,
-  items: [],
-  weight: 0,
-  palette_number: paletteNumber,
-});
+// const createNewParcel = (
+//   orderId: string,
+//   paletteNumber: number
+// ): ParcelWithoutTrackingId => ({
+//   order_id: orderId,
+//   items: [],
+//   weight: 0,
+//   palette_number: paletteNumber,
+// });
 
 export const generateParcels = (
   items: Item[],
   orders: Order[]
 ): ParcelWithoutTrackingId[] => {
   const MAX_PARCEL_WEIGHT = 30;
-  const MAX_PARCELS_IN_PALETTE = 15;
+  // const MAX_PARCELS_IN_PALETTE = 15;
 
   let parcels: ParcelWithoutTrackingId[] = [];
-  let totalParcelWeight = 0;
-  let paletteNumber = 1;
-  let currentParcel = createNewParcel(orders[0].id, paletteNumber);
 
   orders.forEach((order: Order) => {
-    order.items.forEach((orderItem: OrderItem) => {
+    const orderWithWeight = order.items.map((orderItem: OrderItem) => {
       const itemInfo = items.find((item) => item.id === orderItem.item_id);
-      const orderItemWeight = parseFloat(itemInfo!.weight) * orderItem.quantity;
+      const orderItemWeight = parseFloat(itemInfo!.weight);
+      return { ...orderItem, weight: orderItemWeight, order_id: order.id };
+    });
+    const sortedOrderByWeightAsc = orderWithWeight.sort(
+      (a, b) => a.weight - b.weight
+    );
+    const flatSortedOrder = sortedOrderByWeightAsc.flatMap((orderItem, index) =>
+      Array(orderItem.quantity).fill({
+        ...orderWithWeight[index],
+        quantity: 1,
+      })
+    );
 
-      if (orderItemWeight > MAX_PARCEL_WEIGHT) {
-        for (let i = 0; i < orderItem.quantity; i++) {
-          const nbOfParcelsInPalette = getNbOfParcelsInPalette(
-            parcels,
-            paletteNumber
-          );
-          if (nbOfParcelsInPalette === MAX_PARCELS_IN_PALETTE) {
-            paletteNumber++;
-          }
+    const sizeOf = (item: any) => item["weight"];
+    const result = binPacker.nextFit(
+      flatSortedOrder,
+      sizeOf,
+      MAX_PARCEL_WEIGHT
+    );
 
-          const newParcel = createNewParcel(order.id, paletteNumber);
-          newParcel.items.push(orderItem);
-          newParcel.weight = parseFloat(itemInfo!.weight);
-
-          parcels.push(newParcel);
-        }
-      } else if (orderItemWeight + totalParcelWeight > MAX_PARCEL_WEIGHT) {
-        const currentParcelItems = getUniqueParcelItems(currentParcel.items);
-        currentParcel.items = currentParcelItems;
-        parcels.push(currentParcel);
-
-        totalParcelWeight = 0;
-
-        const nbOfParcelsInPalette = getNbOfParcelsInPalette(
-          parcels,
-          paletteNumber
-        );
-        if (nbOfParcelsInPalette === MAX_PARCELS_IN_PALETTE) {
-          paletteNumber++;
-        }
-        currentParcel = createNewParcel(order.id, paletteNumber);
-        currentParcel.items.push(orderItem);
-      } else {
-        totalParcelWeight = totalParcelWeight + orderItemWeight;
-        currentParcel.items.push(orderItem);
-        currentParcel.weight = totalParcelWeight;
-      }
+    result.bins.forEach((parcel: any) => {
+      const parcelItems = parcel.map((item: any) => ({
+        item_id: item.item_id,
+        quantity: item.quantity,
+      }));
+      const parcelWeight = parcel.reduce(
+        (acc: number, item: any) => acc + item.weight,
+        0
+      );
+      const parcelToAdd = {
+        order_id: order.id,
+        items: parcelItems,
+        weight: parcelWeight,
+        palette_number: parcel.palette_number,
+      };
+      parcels.push(parcelToAdd);
     });
   });
 
-  return parcels;
+  return parcels.map((parcel) => ({
+    ...parcel,
+    items: getUniqueParcelItems(parcel.items),
+  }));
 };
