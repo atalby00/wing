@@ -1,5 +1,9 @@
 import { Item } from "../interfaces/item.interface";
-import { Order, OrderItem } from "../interfaces/order.interface";
+import {
+  Order,
+  OrderItem,
+  OrderItemWithWeight,
+} from "../interfaces/order.interface";
 import { ParcelWithoutTrackingId } from "../interfaces/parcel.interface";
 const binPacker = require("bin-packer");
 
@@ -31,15 +35,68 @@ const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
 //   return parcelsInPalette.length;
 // };
 
-// const createNewParcel = (
-//   orderId: string,
-//   paletteNumber: number
-// ): ParcelWithoutTrackingId => ({
-//   order_id: orderId,
-//   items: [],
-//   weight: 0,
-//   palette_number: paletteNumber,
-// });
+const mapOrderItemsToOrderItemsWithWeight = (
+  items: Item[],
+  order: Order
+): OrderItemWithWeight[] => {
+  return order.items.map((orderItem: OrderItem) => {
+    const itemInfo = items.find((item) => item.id === orderItem.item_id);
+    const itemWeight = parseFloat(itemInfo!.weight);
+    return { ...orderItem, item_weight: itemWeight };
+  });
+};
+
+const sortOrderItemsByWeightAsc = (
+  orderItemsWithWeight: OrderItemWithWeight[]
+) => {
+  return orderItemsWithWeight.sort((a, b) => a.item_weight - b.item_weight);
+};
+
+const flattenOrderItemsWithWeightByQuantity = (
+  orderItemsWithWeight: OrderItemWithWeight[]
+) => {
+  return orderItemsWithWeight.flatMap((orderItem) => {
+    return Array(orderItem.quantity).fill({
+      ...orderItem,
+      quantity: 1,
+    });
+  });
+};
+
+const packOrderItemsWithWeight = (
+  orderItemsWithWeight: OrderItemWithWeight[],
+  maxParcelWeight: number
+) => {
+  const packByProperty = (item: OrderItemWithWeight) => item.item_weight;
+  const packedItemsWithWeight = binPacker.nextFit(
+    orderItemsWithWeight,
+    packByProperty,
+    maxParcelWeight
+  );
+  return packedItemsWithWeight.bins;
+};
+
+const createParcel = (
+  orderId: string,
+  orderItemsWithWeight: OrderItemWithWeight[]
+): ParcelWithoutTrackingId => {
+  const parcelItems: OrderItem[] = orderItemsWithWeight.map(
+    (item: OrderItemWithWeight) => ({
+      item_id: item.item_id,
+      quantity: item.quantity,
+    })
+  );
+  const parcelWeight = orderItemsWithWeight.reduce(
+    (acc: number, item: any) => acc + item.item_weight,
+    0
+  );
+  return {
+    order_id: orderId,
+    items: parcelItems,
+    weight: parcelWeight,
+    palette_number: 1,
+  };
+};
 
 export const generateParcels = (
   items: Item[],
@@ -48,52 +105,38 @@ export const generateParcels = (
   const MAX_PARCEL_WEIGHT = 30;
   // const MAX_PARCELS_IN_PALETTE = 15;
 
-  let parcels: ParcelWithoutTrackingId[] = [];
+  let parcelsWithoutTracking: ParcelWithoutTrackingId[] = [];
 
   orders.forEach((order: Order) => {
-    const orderWithWeight = order.items.map((orderItem: OrderItem) => {
-      const itemInfo = items.find((item) => item.id === orderItem.item_id);
-      const orderItemWeight = parseFloat(itemInfo!.weight);
-      return { ...orderItem, weight: orderItemWeight, order_id: order.id };
-    });
-    const sortedOrderByWeightAsc = orderWithWeight.sort(
-      (a, b) => a.weight - b.weight
-    );
-    const flatSortedOrder = sortedOrderByWeightAsc.flatMap((orderItem, index) =>
-      Array(orderItem.quantity).fill({
-        ...orderWithWeight[index],
-        quantity: 1,
-      })
-    );
+    const orderItemsWithWeight: OrderItemWithWeight[] =
+      mapOrderItemsToOrderItemsWithWeight(items, order);
 
-    const sizeOf = (item: any) => item["weight"];
-    const result = binPacker.nextFit(
-      flatSortedOrder,
-      sizeOf,
+    const sortedOrderItemsByWeightAsc: OrderItemWithWeight[] =
+      sortOrderItemsByWeightAsc(orderItemsWithWeight);
+
+    const flattenedSortedOrderItems: OrderItemWithWeight[] =
+      flattenOrderItemsWithWeightByQuantity(sortedOrderItemsByWeightAsc);
+
+    const packedOrderItemsWithWeight = packOrderItemsWithWeight(
+      flattenedSortedOrderItems,
       MAX_PARCEL_WEIGHT
     );
 
-    result.bins.forEach((parcel: any) => {
-      const parcelItems = parcel.map((item: any) => ({
-        item_id: item.item_id,
-        quantity: item.quantity,
-      }));
-      const parcelWeight = parcel.reduce(
-        (acc: number, item: any) => acc + item.weight,
-        0
-      );
-      const parcelToAdd = {
-        order_id: order.id,
-        items: parcelItems,
-        weight: parcelWeight,
-        palette_number: parcel.palette_number,
-      };
-      parcels.push(parcelToAdd);
-    });
+    packedOrderItemsWithWeight.forEach(
+      (orderItemsWithWeight: OrderItemWithWeight[]) => {
+        const parcelWithoutTranckingId = createParcel(
+          order.id,
+          orderItemsWithWeight
+        );
+        parcelsWithoutTracking.push(parcelWithoutTranckingId);
+      }
+    );
   });
 
-  return parcels.map((parcel) => ({
+  const parcelsWithUniqueItems = parcelsWithoutTracking.map((parcel) => ({
     ...parcel,
     items: getUniqueParcelItems(parcel.items),
   }));
+
+  return parcelsWithUniqueItems;
 };
