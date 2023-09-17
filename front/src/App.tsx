@@ -46,6 +46,7 @@ function App() {
           <SidebarSection
             key={index}
             sectionNumber={index + 1}
+            selectedPalette={selectedPalette}
             onClick={handlePaletteChange}
           >
             <p className="font-medium text-base">Palette {index + 1}</p>
