@@ -7,11 +7,18 @@ interface useFetchParcelsReturn {
   earnings: number | null;
   getNbPaletes: () => number;
   getParcelsFromPalette: (paletteNumber: number) => Parcel[] | undefined;
+  getNbItems: () => number | undefined;
 }
 
 export const useFetchParcels = (): useFetchParcelsReturn => {
   const [parcels, setParcels] = useState<Parcel[] | null>(null);
   const [earnings, setEarnings] = useState<number | null>(null);
+
+  const getNbItems = () => {
+    const allItems = parcels?.map((parcel) => parcel.items).flat();
+    const nbItems = allItems?.reduce((acc, item) => acc + item.quantity, 0);
+    return nbItems;
+  };
 
   const getNbPaletes = () => {
     const paletteList = parcels?.map((parcel) => parcel.palette_number);
@@ -40,5 +47,6 @@ export const useFetchParcels = (): useFetchParcelsReturn => {
     earnings,
     getNbPaletes,
     getParcelsFromPalette,
+    getNbItems,
   };
 };

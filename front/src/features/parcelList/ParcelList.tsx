@@ -9,14 +9,14 @@ interface ParcelListProps {
 
 export const ParcelList: FC<ParcelListProps> = ({ parcels }) => {
   return (
-    <div className="max-w-7xl mx-auto px-4 pb-3">
+    <div className="pb-3">
       {parcels?.map((parcel, index) => (
         <div className="mb-5" key={index}>
           <Accordion title={`Colis ${index + 1}`}>
             <div className="flex flex-row justify-between mb-3">
               <Badge size="lg" color="gray">
                 Poids total du colis :{" "}
-                <strong>{parcel.weight.toFixed(2)} kg</strong>
+                <strong>{parcel.weight.toFixed(1)} kg</strong>
               </Badge>
               <Badge size="lg">
                 Code de tracking : <strong>{parcel.tracking_id}</strong>

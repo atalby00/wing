@@ -13,7 +13,7 @@ export const SidebarSection: FC<PropsWithChildren<SidebarSectionProps>> = ({
 }) => {
   const handleSectionClick = useCallback(() => {
     onClick(sectionNumber);
-  }, []);
+  }, [onClick, sectionNumber]);
 
   return (
     <FlowbiteSidebar.Item
