@@ -68,10 +68,10 @@ const packOrderItemsWithWeight = (
   orderItemsWithWeight: OrderItemWithWeight[],
   maxParcelWeight: number
 ) => {
-  const packByProperty = (item: OrderItemWithWeight) => item.item_weight;
+  const packItemsByProperty = (item: OrderItemWithWeight) => item.item_weight;
   const packedItemsWithWeight = binPacker.nextFit(
     orderItemsWithWeight,
-    packByProperty,
+    packItemsByProperty,
     maxParcelWeight
   );
   return packedItemsWithWeight.bins;
@@ -100,6 +100,20 @@ const createParcel = (
   };
 };
 
+export const calculateEarnings = (weight: number) => {
+  if (weight <= 1) return 1;
+  if (weight <= 5) return 2;
+  if (weight <= 10) return 3;
+  if (weight <= 20) return 5;
+  return 10;
+};
+
+export const generateTrackingCode = () => {
+  const min = 100000000;
+  const max = 110000000;
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
 export const generateParcels = (
   items: Item[],
   orders: Order[]
@@ -124,11 +138,11 @@ export const generateParcels = (
 
     packedOrderItemsWithWeight.forEach(
       (orderItemsWithWeight: OrderItemWithWeight[]) => {
-        const paletteCapacityReached = isPaletteCapacityReached(
+        const ispaletteNumberCapacityReached = isPaletteCapacityReached(
           parcelsWithoutTracking,
           paletteNumber
         );
-        if (paletteCapacityReached) paletteNumber++;
+        if (ispaletteNumberCapacityReached) paletteNumber++;
 
         const parcelWithoutTranckingId = createParcel(
           order.id,
