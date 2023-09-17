@@ -7,6 +7,8 @@ export interface Order {
 export interface OrderItem {
   item_id: string;
   quantity: number;
+  weight?: number;
+  name?: string;
 }
 
 export type OrderItemWithWeight = OrderItem & {

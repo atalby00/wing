@@ -19,7 +19,12 @@ const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
       (acc, parcelItem) => acc + parcelItem.quantity,
       0
     );
-    return { item_id: uniqueParcelItemId, quantity: totalQuantity };
+    return {
+      item_id: uniqueParcelItemId,
+      quantity: totalQuantity,
+      name: parcelItemsWithSameId[0].name,
+      weight: parcelItemsWithSameId[0].weight,
+    };
   });
 
   return uniqueParcelItems;
@@ -43,7 +48,7 @@ const mapOrderItemsToOrderItemsWithWeight = (
   return order.items.map((orderItem: OrderItem) => {
     const itemInfo = items.find((item) => item.id === orderItem.item_id);
     const itemWeight = parseFloat(itemInfo!.weight);
-    return { ...orderItem, item_weight: itemWeight };
+    return { ...orderItem, item_weight: itemWeight, name: itemInfo!.name };
   });
 };
 
@@ -118,6 +123,8 @@ const createParcel = (
     (item: OrderItemWithWeight) => ({
       item_id: item.item_id,
       quantity: item.quantity,
+      name: item.name,
+      weight: item.item_weight,
     })
   );
   const parcelWeight = orderItemsWithWeight.reduce(

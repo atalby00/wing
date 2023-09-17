@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @font-face {
   font-family: "Roboto";
   src: url("./assets/fonts/Roboto-Black.ttf") format("ttf"),
@@ -17,6 +21,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
 }
 
 code {
