@@ -82,7 +82,7 @@ const mapOrderItemsToParcelItems = (
 const sortParcelItemsByWeightAsc = (
   parcelItems: ParcelItem[]
 ): ParcelItem[] => {
-  return parcelItems.sort((a, b) => a.weight - b.weight);
+  return parcelItems.sort((a, b) => b.weight - a.weight);
 };
 
 /**
@@ -115,28 +115,33 @@ const packParcelItems = (
   let parcelItemPacks: ParcelItem[][] = [];
   let currentPack: ParcelItem[] = [];
 
-  parcelItems.reduce((totalParcelWeight, item, index) => {
-    const isLastItem = index === parcelItems.length - 1;
-    const currentParcelWeight = totalParcelWeight + item.weight;
-
-    if (currentParcelWeight > maxParcelWeight) {
-      parcelItemPacks.push(currentPack);
-      const newPack = [item];
-      if (isLastItem) {
-        parcelItemPacks.push(newPack);
+  let remainingItems = [...parcelItems];
+  let remainingItemsCopy = [...parcelItems];
+  let totalWeight = 0;
+  let end = false;
+  while (remainingItemsCopy.length > 0) {
+    remainingItems = [...remainingItemsCopy];
+    while (remainingItems.length > 0 || !end) {
+      const remainingCapacity = maxParcelWeight - totalWeight;
+      remainingItems = remainingItems.filter(
+        (item) => item.weight <= remainingCapacity
+      );
+      if (remainingItems.length === 0) {
+        end = true;
       } else {
-        currentPack = newPack;
+        const addedItem = remainingItems.shift();
+        const addedItemIndex = remainingItemsCopy.findIndex(
+          (item) => item.item_id !== addedItem.item_id
+        );
+        remainingItemsCopy.splice(addedItemIndex, 1);
+        currentPack.push(addedItem);
+        totalWeight = totalWeight + addedItem.weight;
       }
-      return item.weight;
     }
-
-    currentPack.push(item);
-    if (isLastItem) {
-      parcelItemPacks.push(currentPack);
-    }
-    return currentParcelWeight;
-  }, 0);
-
+    parcelItemPacks.push(currentPack);
+    currentPack = [];
+    totalWeight = 0;
+  }
   return parcelItemPacks;
 };
 
