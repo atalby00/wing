@@ -5,7 +5,7 @@ import {
   ParcelWithoutTracking,
 } from "../interfaces/parcel.interface";
 
-/** Décommenter le code ci-dessous afin d'utiliser bin packer pour grouper les colis */
+/** Décommenter le code ci-dessous afin d'utiliser bin-packer pour grouper les colis */
 // const binPacker = require("bin-packer");
 
 /**
@@ -143,16 +143,16 @@ const packParcelItems = (
 /** Décommenter le code ci-dessous et commenter le code ci-dessus afin d'utiliser bin-packer pour grouper les colis */
 /** Ne pas oublier de décommenter l'import de bin-packer qui se trouve au début de ce fichier */
 // const packParcelItems = (
-//   orderItemsWithWeight: OrderItemWithWeight[],
+//   parcelItems: ParcelItem[],
 //   maxParcelWeight: number
-// ) => {
-//   const packItemsByProperty = (item: OrderItemWithWeight) => item.item_weight;
-//   const packedItemsWithWeight = binPacker.nextFit(
-//     orderItemsWithWeight,
+// ): ParcelItem[][] => {
+//   const packItemsByProperty = (item: ParcelItem) => item.weight;
+//   const packedParcelItems = binPacker.nextFit(
+//     parcelItems,
 //     packItemsByProperty,
 //     maxParcelWeight
 //   );
-//   return packedItemsWithWeight.bins;
+//   return packedParcelItems.bins;
 // };
 
 /**

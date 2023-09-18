@@ -3,10 +3,10 @@ import { items } from "../core/data/items.json";
 import { orders } from "../core/data/orders.json";
 import { generateParcels } from "../core/helpers/generateParcels.helper";
 
-//* Décommenter le code ci-dessous pour extraire les tracking_id de l'API random.org */
+/** Décommenter le code ci-dessous pour extraire les tracking_id de l'API random.org */
 // import axios from "axios";
 
-//* Commenter le code ci-dessous et décommenter le code ci-dessus pour extraire les tracking_id de l'API random.org */
+/** Commenter le code ci-dessous et décommenter le code ci-dessus pour extraire les tracking_id de l'API random.org */
 import { generateTrackingCode } from "../core/helpers/generateTrackingCode.helper";
 
 import { calculateEarnings } from "../core/helpers/calculateEarnings.helper";
