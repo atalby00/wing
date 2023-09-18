@@ -27,7 +27,7 @@ export const ParcelList: FC<ParcelListProps> = ({ parcels }) => {
                 <Table.HeadCell>Identifiant de commande</Table.HeadCell>
                 <Table.HeadCell>Identifiant du produit</Table.HeadCell>
                 <Table.HeadCell>Nom</Table.HeadCell>
-                <Table.HeadCell>Poids (kg)</Table.HeadCell>
+                <Table.HeadCell>Poids à l'unité (kg)</Table.HeadCell>
                 <Table.HeadCell>Quantité</Table.HeadCell>
               </Table.Head>
               {parcel.items.map((item) => (

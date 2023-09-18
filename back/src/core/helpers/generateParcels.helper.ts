@@ -1,37 +1,50 @@
-// const binPacker = require("bin-packer");
 import { Item } from "../interfaces/item.interface";
+import { Order, OrderItem } from "../interfaces/order.interface";
 import {
-  Order,
-  OrderItem,
-  OrderItemWithWeight,
-} from "../interfaces/order.interface";
-import { ParcelWithoutTrackingId } from "../interfaces/parcel.interface";
+  ParcelItem,
+  ParcelWithoutTracking,
+} from "../interfaces/parcel.interface";
 
-const getUniqueParcelItems = (parcelItems: OrderItem[]): OrderItem[] => {
-  const parcelItemIds = parcelItems.map((parcelItem) => parcelItem.item_id);
-  const uniqueParcelItemIds = [...new Set(parcelItemIds)];
+/** Décommenter le code ci-dessous afin d'utiliser bin packer pour grouper les colis */
+// const binPacker = require("bin-packer");
 
-  const uniqueParcelItems = uniqueParcelItemIds.map((uniqueParcelItemId) => {
-    const parcelItemsWithSameId = parcelItems.filter(
-      (parcelItem) => parcelItem.item_id === uniqueParcelItemId
+/**
+ * Cette fonction prend une liste d'articles de colis et renvoie une liste d'articles de colis uniques.
+ * @example [{item_id: "1", quantity: 2, weight: 2, name: "Article 1"}, {item_id: "1", quantity: 1, weight: 2, name: "Article 1"}] => [{item_id: "1", quantity: 3, weight: 2, name: "Article 1"}]
+ * @param {ParcelItem[]} parcelItems - La liste d'articles de colis à traiter.
+ * @returns {ParcelItem[]} La liste d'articles de colis uniques.
+ */
+const getUniqueParcelItems = (parcelItems: ParcelItem[]): ParcelItem[] => {
+  const itemIds = parcelItems.map((parcelItem) => parcelItem.item_id);
+  const uniqueItemIds = [...new Set(itemIds)];
+
+  const uniqueParcelItems = uniqueItemIds.map((itemId: string) => {
+    const itemsWithSameId = parcelItems.filter(
+      (parcelItem: ParcelItem) => parcelItem.item_id === itemId
     );
-    const totalQuantity = parcelItemsWithSameId.reduce(
+    const totalQuantity = itemsWithSameId.reduce(
       (acc, parcelItem) => acc + parcelItem.quantity,
       0
     );
     return {
-      item_id: uniqueParcelItemId,
+      item_id: itemId,
       quantity: totalQuantity,
-      name: parcelItemsWithSameId[0].name,
-      weight: parcelItemsWithSameId[0].weight,
+      name: itemsWithSameId[0].name,
+      weight: itemsWithSameId[0].weight,
     };
   });
 
   return uniqueParcelItems;
 };
 
-const isPaletteCapacityReached = (
-  parcels: ParcelWithoutTrackingId[],
+/**
+ * Cette fonction vérifie si la capacité maximale de la palette est atteinte.
+ * @param {ParcelWithoutTracking[]} parcels - La liste de colis déjà créés.
+ * @param {number} paletteNumber - Le numéro de la palette à vérifier.
+ * @returns {boolean} True si la capacité maximale de la palette est atteinte, sinon false.
+ */
+const checkPaletteCapacityReached = (
+  parcels: ParcelWithoutTracking[],
   paletteNumber: number
 ): boolean => {
   const MAX_PARCELS_IN_PALETTE = 15;
@@ -41,67 +54,95 @@ const isPaletteCapacityReached = (
   return parcelsInPalette.length === MAX_PARCELS_IN_PALETTE;
 };
 
-const mapOrderItemsToOrderItemsWithWeight = (
+/**
+ * Cette fonction prend une commande et une liste d'articles et renvoie une liste d'articles de colis en rajoutant
+ * le poids et le nom de l'article à chaque article de la commande.
+ * @example [{item_id: "1", quantity: 2}, {item_id: "2", quantity: 1}] => [{item_id: "1", quantity: 2, weight: 2, name: "Article 1"}, {item_id: "2", quantity: 1, weight: 1, name: "Article 2"}]
+ * @param {Item[]} items - La liste d'articles disponibles.
+ * @param {Order} order - La commande à traiter.
+ * @returns {ParcelItem[]} La liste d'articles de colis correspondant à la commande.
+ */
+const mapOrderItemsToParcelItems = (
   items: Item[],
   order: Order
-): OrderItemWithWeight[] => {
+): ParcelItem[] => {
   return order.items.map((orderItem: OrderItem) => {
     const itemInfo = items.find((item) => item.id === orderItem.item_id);
     const itemWeight = parseFloat(itemInfo!.weight);
-    return { ...orderItem, item_weight: itemWeight, name: itemInfo!.name };
+    return { ...orderItem, weight: itemWeight, name: itemInfo!.name };
   });
 };
 
-const sortOrderItemsByWeightAsc = (
-  orderItemsWithWeight: OrderItemWithWeight[]
-) => {
-  return orderItemsWithWeight.sort((a, b) => a.item_weight - b.item_weight);
+/**
+ * Cette fonction trie une liste d'articles de colis par poids croissant.
+ * @example [{weight: 2}, {weight: 1}] => [{weight: 1}, {weight: 2}]
+ * @param {ParcelItem[]} parcelItems - La liste d'articles de colis à trier.
+ * @returns {ParcelItem[]} La liste d'articles de colis triée par poids croissant.
+ */
+const sortParcelItemsByWeightAsc = (
+  parcelItems: ParcelItem[]
+): ParcelItem[] => {
+  return parcelItems.sort((a, b) => a.weight - b.weight);
 };
 
-const flattenOrderItemsWithWeightByQuantity = (
-  orderItemsWithWeight: OrderItemWithWeight[]
-) => {
-  return orderItemsWithWeight.flatMap((orderItem) => {
-    return Array(orderItem.quantity).fill({
-      ...orderItem,
+/**
+ * Cette fonction "aplatit" une liste d'articles de colis groupés par poids en une liste d'articles individuels de quantité 1.
+ * @example [{item_id: "1", quantity: 2}, {item_id: "2", quantity: 1}] => [{item_id: "1", quantity: 1}, {item_id: "1", quantity: 1}, {item_id: "2", quantity: 1}]
+ * @param {ParcelItem[]} parcelItems - La liste d'articles individuels à grouper en colis.
+ * @param {number} maxParcelWeight - Le poids maximum autorisé pour chaque colis.
+ * @returns {ParcelItem[][]} La liste de colis.
+ */
+const flattenParcelItems = (parcelItems: ParcelItem[]): ParcelItem[] => {
+  return parcelItems.flatMap((item: ParcelItem) => {
+    return Array(item.quantity).fill({
+      ...item,
       quantity: 1,
     });
   });
 };
 
-const packOrderItemsWithWeight = (
-  orderItemsWithWeight: OrderItemWithWeight[],
+/**
+ * Cette fonction regroupe une liste d'articles individuels en colis en fonction de leur poids, en veillant à ne pas dépasser le poids maximum de colis.
+ * @example Si maxParcelWeight = 3 : [{item_id: "1", quantity: 1, weight: 2}, {item_id: "1", quantity: 1, weight: 1}, {item_id: "2", quantity: 1, weight: 1}] => [[{item_id: "1", quantity: 1, weight: 2}, {item_id: "1", quantity: 1, weight: 1}], [{item_id: "2", quantity: 1, weight: 1}]]
+ * @param {ParcelItem[]} parcelItems - La liste d'articles individuels à grouper en colis.
+ * @param {number} maxParcelWeight - Le poids maximum autorisé pour chaque colis.
+ * @returns {ParcelItem[][]} La liste de colis.
+ */
+const packParcelItems = (
+  parcelItems: ParcelItem[],
   maxParcelWeight: number
 ) => {
-  let parcels: OrderItemWithWeight[][] = [];
-  let parcel: OrderItemWithWeight[] = [];
+  let parcelItemPacks: ParcelItem[][] = [];
+  let currentPack: ParcelItem[] = [];
 
-  orderItemsWithWeight.reduce((totalParcelWeight, orderItem, index) => {
-    const isLastItem = index === orderItemsWithWeight.length - 1;
-    const currentParcelWeight = totalParcelWeight + orderItem.item_weight;
+  parcelItems.reduce((totalParcelWeight, item, index) => {
+    const isLastItem = index === parcelItems.length - 1;
+    const currentParcelWeight = totalParcelWeight + item.weight;
 
     if (currentParcelWeight > maxParcelWeight) {
-      parcels.push(parcel);
-      const newParcel = [orderItem];
+      parcelItemPacks.push(currentPack);
+      const newPack = [item];
       if (isLastItem) {
-        parcels.push(newParcel);
+        parcelItemPacks.push(newPack);
       } else {
-        parcel = newParcel;
+        currentPack = newPack;
       }
-      return orderItem.item_weight;
+      return item.weight;
     }
 
-    parcel.push(orderItem);
+    currentPack.push(item);
     if (isLastItem) {
-      parcels.push(parcel);
+      parcelItemPacks.push(currentPack);
     }
     return currentParcelWeight;
   }, 0);
 
-  return parcels;
+  return parcelItemPacks;
 };
 
-// const packOrderItemsWithWeight = (
+/** Décommenter le code ci-dessous et commenter le code ci-dessus afin d'utiliser bin-packer pour grouper les colis */
+/** Ne pas oublier de décommenter l'import de bin-packer qui se trouve au début de ce fichier */
+// const packParcelItems = (
 //   orderItemsWithWeight: OrderItemWithWeight[],
 //   maxParcelWeight: number
 // ) => {
@@ -114,21 +155,21 @@ const packOrderItemsWithWeight = (
 //   return packedItemsWithWeight.bins;
 // };
 
+/**
+ * Cette fonction prend un identifiant de commande, un numéro de palette et une liste d'articles de colis et renvoie un objet de colis.
+ * @param {string} orderId - L'identifiant de la commande.
+ * @param {number} paletteNumber - Le numéro de la palette.
+ * @param {ParcelItem[]} parcelItems - La liste d'articles de colis.
+ * @returns {ParcelWithoutTracking} L'objet de colis.
+ */
+/** Commenter le code ci-dessous afin d'utiliser la librairie bin-packer pour grouper les colis */
 const createParcel = (
   orderId: string,
   paletteNumber: number,
-  orderItemsWithWeight: OrderItemWithWeight[]
-): ParcelWithoutTrackingId => {
-  const parcelItems: OrderItem[] = orderItemsWithWeight.map(
-    (item: OrderItemWithWeight) => ({
-      item_id: item.item_id,
-      quantity: item.quantity,
-      name: item.name,
-      weight: item.item_weight,
-    })
-  );
-  const parcelWeight = orderItemsWithWeight.reduce(
-    (acc: number, item: any) => acc + item.item_weight,
+  parcelItems: ParcelItem[]
+): ParcelWithoutTracking => {
+  const parcelWeight = parcelItems.reduce(
+    (acc: number, item: any) => acc + item.weight,
     0
   );
   return {
@@ -139,62 +180,53 @@ const createParcel = (
   };
 };
 
-export const calculateEarnings = (weight: number) => {
-  if (weight <= 1) return 1;
-  if (weight <= 5) return 2;
-  if (weight <= 10) return 3;
-  if (weight <= 20) return 5;
-  return 10;
-};
-
-export const generateTrackingCode = () => {
-  const min = 100000000;
-  const max = 110000000;
-  return Math.floor(Math.random() * (max - min + 1) + min);
-};
-
+/**
+ * Cette fonction génère une liste de colis à partir des commandes et des articles.
+ * @param {Item[]} items - La liste d'articles disponibles.
+ * @param {Order[]} orders - La liste de commandes à traiter.
+ * @returns {ParcelWithoutTracking[]} La liste de colis générée.
+ */
 export const generateParcels = (
   items: Item[],
   orders: Order[]
-): ParcelWithoutTrackingId[] => {
+): ParcelWithoutTracking[] => {
   const MAX_PARCEL_WEIGHT = 30;
 
-  let parcelsWithoutTracking: ParcelWithoutTrackingId[] = [];
+  let parcelsWithoutTracking: ParcelWithoutTracking[] = [];
   let paletteNumber = 1;
 
   orders.forEach((order: Order) => {
-    const orderItemsWithWeight: OrderItemWithWeight[] =
-      mapOrderItemsToOrderItemsWithWeight(items, order);
+    const parcelItem: ParcelItem[] = mapOrderItemsToParcelItems(items, order);
 
-    const sortedOrderItemsByWeightAsc: OrderItemWithWeight[] =
-      sortOrderItemsByWeightAsc(orderItemsWithWeight);
+    const sortedParcelItems: ParcelItem[] =
+      sortParcelItemsByWeightAsc(parcelItem);
 
-    const flattenedSortedOrderItems: OrderItemWithWeight[] =
-      flattenOrderItemsWithWeightByQuantity(sortedOrderItemsByWeightAsc);
+    const flattenedSortedParcelItems: ParcelItem[] =
+      flattenParcelItems(sortedParcelItems);
 
-    const packedOrderItemsWithWeight: OrderItemWithWeight[][] =
-      packOrderItemsWithWeight(flattenedSortedOrderItems, MAX_PARCEL_WEIGHT);
-
-    packedOrderItemsWithWeight.forEach(
-      (orderItemsWithWeight: OrderItemWithWeight[]) => {
-        const ispaletteNumberCapacityReached = isPaletteCapacityReached(
-          parcelsWithoutTracking,
-          paletteNumber
-        );
-        if (ispaletteNumberCapacityReached) paletteNumber++;
-
-        const parcelWithoutTranckingId = createParcel(
-          order.id,
-          paletteNumber,
-          orderItemsWithWeight
-        );
-        parcelsWithoutTracking.push(parcelWithoutTranckingId);
-      }
+    const parcelItemPacks: ParcelItem[][] = packParcelItems(
+      flattenedSortedParcelItems,
+      MAX_PARCEL_WEIGHT
     );
+
+    parcelItemPacks.forEach((parcelItems: ParcelItem[]) => {
+      const isPaletteCapacityReached = checkPaletteCapacityReached(
+        parcelsWithoutTracking,
+        paletteNumber
+      );
+      if (isPaletteCapacityReached) paletteNumber++;
+
+      const newParcel: ParcelWithoutTracking = createParcel(
+        order.id,
+        paletteNumber,
+        parcelItems
+      );
+      parcelsWithoutTracking.push(newParcel);
+    });
   });
 
-  const parcelsWithUniqueItems: ParcelWithoutTrackingId[] =
-    parcelsWithoutTracking.map((parcel: ParcelWithoutTrackingId) => ({
+  const parcelsWithUniqueItems: ParcelWithoutTracking[] =
+    parcelsWithoutTracking.map((parcel: ParcelWithoutTracking) => ({
       ...parcel,
       items: getUniqueParcelItems(parcel.items),
     }));
