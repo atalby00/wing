@@ -9,8 +9,14 @@ import Loader from "./components/loader";
 
 function App() {
   const [selectedPalette, setSelectedPalette] = useState(1);
-  const { parcels, earnings, getNbPaletes, getParcelsFromPalette, getNbItems } =
-    useFetchParcels();
+  const {
+    parcels,
+    earnings,
+    getNbPaletes,
+    getParcelsFromPalette,
+    getNbItems,
+    error,
+  } = useFetchParcels();
   const parcelsFromSelectedPalette = useMemo(
     () => getParcelsFromPalette(selectedPalette),
     [getParcelsFromPalette, selectedPalette]
@@ -30,6 +36,10 @@ function App() {
     },
     [setSelectedPalette]
   );
+
+  if (error) {
+    return <>{error}</>;
+  }
 
   if (!parcels) {
     return (

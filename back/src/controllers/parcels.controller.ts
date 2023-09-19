@@ -25,13 +25,21 @@ export const parcelsList = async (_: Request, res: Response) => {
   /** Ne pas oublier de décommenter l'import de la librairie axios qui se trouve au début de ce fichier  */
   // const parcels: Parcel[] = await Promise.all(
   //   parcelsWithoutTrackingId.map(async (parcel: ParcelWithoutTracking) => {
-  //     const trackingId = await axios.get(
-  //       "https://www.random.org/integers/?num=1&min=100000000&max=110000000&col=1&base=10&format=plain&rnd=new"
-  //     );
-  //     return {
-  //       ...parcel,
-  //       tracking_id: trackingId.data,
-  //     };
+  //     try {
+  //       const trackingId = await axios.get(
+  //         "https://www.random.org/integers/?num=1&min=100000000&max=110000000&col=1&base=10&format=plain&rnd=new"
+  //       );
+  //       return {
+  //         ...parcel,
+  //         tracking_id: trackingId.data,
+  //       };
+  //     } catch (error) {
+  //       res.status(500).json("An error occured while fetching tracking code.");
+  //       return {
+  //         ...parcel,
+  //         tracking_id: 0,
+  //       };
+  //     }
   //   })
   // );
 

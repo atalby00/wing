@@ -74,12 +74,12 @@ const mapOrderItemsToParcelItems = (
 };
 
 /**
- * Cette fonction trie une liste d'articles de colis par poids croissant.
- * @example [{weight: 2}, {weight: 1}] => [{weight: 1}, {weight: 2}]
+ * Cette fonction trie une liste d'articles de colis par poids décroissant.
+ * @example [{weight: 2}, {weight: 1}] => [{weight: 2}, {weight: 1}]
  * @param {ParcelItem[]} parcelItems - La liste d'articles de colis à trier.
- * @returns {ParcelItem[]} La liste d'articles de colis triée par poids croissant.
+ * @returns {ParcelItem[]} La liste d'articles de colis triée par poids décroissant.
  */
-const sortParcelItemsByWeightAsc = (
+const sortParcelItemsByWeightDesc = (
   parcelItems: ParcelItem[]
 ): ParcelItem[] => {
   return parcelItems.sort((a, b) => b.weight - a.weight);
@@ -112,36 +112,28 @@ const packParcelItems = (
   parcelItems: ParcelItem[],
   maxParcelWeight: number
 ) => {
-  let parcelItemPacks: ParcelItem[][] = [];
-  let currentPack: ParcelItem[] = [];
-
+  const parcelItemPacks: ParcelItem[][] = [];
   let remainingItems = [...parcelItems];
-  let remainingItemsCopy = [...parcelItems];
+  let currentPack: ParcelItem[] = [];
   let totalWeight = 0;
-  let end = false;
-  while (remainingItemsCopy.length > 0) {
-    remainingItems = [...remainingItemsCopy];
-    while (remainingItems.length > 0 || !end) {
-      const remainingCapacity = maxParcelWeight - totalWeight;
-      remainingItems = remainingItems.filter(
-        (item) => item.weight <= remainingCapacity
-      );
-      if (remainingItems.length === 0) {
-        end = true;
-      } else {
-        const addedItem = remainingItems.shift();
-        const addedItemIndex = remainingItemsCopy.findIndex(
-          (item) => item.item_id !== addedItem.item_id
-        );
-        remainingItemsCopy.splice(addedItemIndex, 1);
-        currentPack.push(addedItem);
-        totalWeight = totalWeight + addedItem.weight;
+
+  while (remainingItems.length > 0) {
+    for (let i = 0; i < remainingItems.length; i++) {
+      const item = remainingItems[i];
+
+      if (item.weight <= maxParcelWeight - totalWeight) {
+        currentPack.push(item);
+        totalWeight += item.weight;
+        remainingItems.splice(i, 1);
+        i--;
       }
     }
-    parcelItemPacks.push(currentPack);
+
+    parcelItemPacks.push([...currentPack]);
     currentPack = [];
     totalWeight = 0;
   }
+
   return parcelItemPacks;
 };
 
@@ -152,7 +144,7 @@ const packParcelItems = (
 //   maxParcelWeight: number
 // ): ParcelItem[][] => {
 //   const packItemsByProperty = (item: ParcelItem) => item.weight;
-//   const packedParcelItems = binPacker.nextFit(
+//   const packedParcelItems = binPacker.bestFitDecreasing(
 //     parcelItems,
 //     packItemsByProperty,
 //     maxParcelWeight
@@ -204,7 +196,7 @@ export const generateParcels = (
     const parcelItem: ParcelItem[] = mapOrderItemsToParcelItems(items, order);
 
     const sortedParcelItems: ParcelItem[] =
-      sortParcelItemsByWeightAsc(parcelItem);
+      sortParcelItemsByWeightDesc(parcelItem);
 
     const flattenedSortedParcelItems: ParcelItem[] =
       flattenParcelItems(sortedParcelItems);

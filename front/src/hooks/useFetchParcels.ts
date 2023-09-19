@@ -8,11 +8,13 @@ interface useFetchParcelsReturn {
   getNbPaletes: () => number;
   getParcelsFromPalette: (paletteNumber: number) => Parcel[] | undefined;
   getNbItems: () => number | undefined;
+  error: string | null;
 }
 
 export const useFetchParcels = (): useFetchParcelsReturn => {
   const [parcels, setParcels] = useState<Parcel[] | null>(null);
   const [earnings, setEarnings] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const getNbItems = useCallback(() => {
     const allItems = parcels?.map((parcel) => parcel.items).flat();
@@ -38,9 +40,16 @@ export const useFetchParcels = (): useFetchParcelsReturn => {
 
   useEffect(() => {
     const getParcels = async () => {
-      const { parcels, earnings } = await fetcDropParcelsOperation();
-      setParcels(parcels);
-      setEarnings(earnings);
+      try {
+        if (error) setError(null);
+        const { parcels, earnings } = await fetcDropParcelsOperation();
+        setParcels(parcels);
+        setEarnings(earnings);
+      } catch (error) {
+        setError(
+          "Une erreur est survenue lors de la récupération du code de tracking."
+        );
+      }
     };
     getParcels();
   }, []);
@@ -51,5 +60,6 @@ export const useFetchParcels = (): useFetchParcelsReturn => {
     getNbPaletes,
     getParcelsFromPalette,
     getNbItems,
+    error,
   };
 };
