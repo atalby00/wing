@@ -50,6 +50,7 @@ export const useFetchParcels = (): useFetchParcelsReturn => {
       }
     };
     getParcels();
+    // eslint-disable-next-line
   }, []);
 
   return {
