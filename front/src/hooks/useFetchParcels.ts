@@ -46,9 +46,7 @@ export const useFetchParcels = (): useFetchParcelsReturn => {
         setParcels(parcels);
         setEarnings(earnings);
       } catch (error) {
-        setError(
-          "Une erreur est survenue lors de la récupération du code de tracking."
-        );
+        setError("Une erreur est survenue.");
       }
     };
     getParcels();
